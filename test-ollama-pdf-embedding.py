@@ -1,33 +1,43 @@
 # https://ollama.com/blog/embedding-models
+# https://python.langchain.com/docs/modules/data_connection/document_loaders/pdf/
 
 import ollama
 import chromadb
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import PyPDFLoader
 
-explanation =  "Llamas are members of the camelid family meaning they're pretty closely related to vicuñas and camels. Llamas were first domesticated and used as pack animals 4,000 to 5,000 years ago in the Peruvian highlands. Llamas can grow as much as 6 feet tall though the average llama between 5 feet 6 inches and 5 feet 9 inches tall. Llamas weigh between 280 and 450 pounds and can carry 25 to 30 percent of their body weight. Llamas are vegetarians and have very efficient digestive systems. Llamas live to be about 20 years old, though some only live for 15 years and others live to be 30 years old"
+
+# Load pdf content
+loader = PyPDFLoader("~/Downloads/1_CKA_CKAD_Basics_of_kubernetes.pdf")
+pages = loader.load_and_split()
+pdfContent = ""
+for i in range(len(pages)):
+    pdfContent += pages[i].page_content
 
 # Split text into chunks
 text_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap = 0)
-texts = text_splitter.create_documents([explanation])
+texts = text_splitter.create_documents([pdfContent])
 
 
 client = chromadb.Client()
 
+client.delete_collection(name="docs")
+
 collection = client.get_or_create_collection(name="docs")
 
 # store each document in a vector embedding database
-for i, d in enumerate(documents):
-    response = ollama.embeddings(model="mxbai-embed-large", prompt=d)
+for i, d in enumerate(texts):
+    response = ollama.embeddings(model="mxbai-embed-large", prompt=d.page_content)
     embedding = response["embedding"]
     collection.add(
         ids=[str(i)],
         embeddings=[embedding],
-        documents=[d]
+        documents=[d.page_content]
     )
 
 
 # an example prompt
-prompt = "What animals are llamas related to?"
+prompt = "What is Kubernetes?"
 
 # generate an embedding for the prompt and retrieve the most relevant doc
 response = ollama.embeddings(
